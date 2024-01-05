@@ -14,6 +14,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.*;
 
@@ -26,7 +27,7 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
 
     private JTable table;
     private boolean colorful = true;
-
+    static JLabel refreshTimeLabel;
     static {
         PropertiesComponent instance = PropertiesComponent.getInstance();
         String tableHeaderValue = instance.getValue(WindowUtils.STOCK_TABLE_HEADER_KEY);
@@ -50,8 +51,9 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
         }
     }
 
-    public StockRefreshHandler(JTable table) {
+    public StockRefreshHandler(JTable table, JLabel refreshTimeLabel) {
         this.table = table;
+        this.refreshTimeLabel = refreshTimeLabel;
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         // Fix tree row height
         FontMetrics metrics = table.getFontMetrics(table.getFont());
@@ -152,6 +154,13 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
         table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
     }
 
+    private static void updateUI() {
+        SwingUtilities.invokeLater(() -> {
+            refreshTimeLabel.setText(LocalDateTime.now().format(TianTianFundHandler.timeFormatter));
+            refreshTimeLabel.setToolTipText("最后刷新时间");
+        });
+    }
+
     protected void updateData(StockBean bean) {
         if (bean.getCode() == null) {
             return;
@@ -167,8 +176,8 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
         } else {
             addRow(convertData);
         }
+        updateUI();
     }
-
     /**
      * 参考源码{@link DefaultTableModel#setValueAt}，此为直接更新行，提高点效率
      *
@@ -203,8 +212,8 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
     protected int findRowIndex(int columnIndex, String value) {
         int rowCount = getRowCount();
         for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            Object valueAt = getValueAt(rowIndex, columnIndex);
-            if (StringUtils.equalsIgnoreCase(value, valueAt.toString())) {
+            String valueAt = getValueAt(rowIndex, columnIndex).toString();
+            if (StringUtils.equalsIgnoreCase(value.substring(value.indexOf("_") + 1), valueAt)) {
                 return rowIndex;
             }
         }

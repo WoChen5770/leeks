@@ -1,5 +1,6 @@
 package utils;
 
+import org.apache.http.Header;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -7,7 +8,6 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -64,6 +64,12 @@ public class HttpClientPool {
     public String get(String url) throws Exception {
         HttpGet httpGet = new HttpGet(url);
         return getResponseContent(url,httpGet);
+    }
+
+    public String get(String url, Header header) throws Exception {
+        HttpGet httpGet = new HttpGet(url);
+        httpGet.setHeader(header);
+        return getResponseContent(url, httpGet);
     }
 
     public String post(String url) throws Exception {

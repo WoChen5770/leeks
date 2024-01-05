@@ -147,7 +147,7 @@ public class StockWindow {
         if (handler instanceof TencentStockHandler){
             return handler;
         }
-        return  new TencentStockHandler(table, refreshTimeLabel);
+        return new TencentStockHandler(table, refreshTimeLabel);
     }
 
     public static void apply() {

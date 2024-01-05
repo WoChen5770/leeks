@@ -9,7 +9,6 @@ import utils.LogUtil;
 import javax.swing.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,11 +19,8 @@ public class TianTianFundHandler extends FundRefreshHandler {
     public final static DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static Gson gson = new Gson();
 
-    private JLabel refreshTimeLabel;
-
     public TianTianFundHandler(JTable table, JLabel refreshTimeLabel) {
-        super(table);
-        this.refreshTimeLabel = refreshTimeLabel;
+        super(table, refreshTimeLabel);
     }
 
     @Override
@@ -62,7 +58,7 @@ public class TianTianFundHandler extends FundRefreshHandler {
         for (String code : codeList) {
             new Thread(() -> {
                 try {
-                    String result = HttpClientPool.getHttpClient().get("http://fundgz.1234567.com.cn/js/" + code + ".js?rt=" + System.currentTimeMillis());
+                    String result = HttpClientPool.getHttpClient().get("https://fundgz.1234567.com.cn/js/" + code + ".js?rt=" + System.currentTimeMillis());
                     String json = result.substring(8, result.length() - 2);
                     if (!json.isEmpty()) {
                         FundBean bean = gson.fromJson(json, FundBean.class);
@@ -101,17 +97,5 @@ public class TianTianFundHandler extends FundRefreshHandler {
                 }
             }).start();
         }
-        updateUI();
     }
-
-    public void updateUI() {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                refreshTimeLabel.setText(LocalDateTime.now().format(timeFormatter));
-                refreshTimeLabel.setToolTipText("最后刷新时间");
-            }
-        });
-    }
-
 }

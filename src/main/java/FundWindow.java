@@ -43,7 +43,7 @@ public class FundWindow implements ToolWindowFactory {
     private JPanel mPanel;
 
     static TianTianFundHandler fundRefreshHandler;
-
+    static JLabel refreshTimeLabel;
     private StockWindow stockWindow = new StockWindow();
     private CoinWindow coinWindow = new CoinWindow();
 
@@ -82,6 +82,61 @@ public class FundWindow implements ToolWindowFactory {
         HttpClientPool.getHttpClient().buildHttpClient(proxyStr);
     }
 
+    public static void refresh() {
+        if (fundRefreshHandler != null) {
+            PropertiesComponent instance = PropertiesComponent.getInstance();
+            boolean colorful = instance.getBoolean("key_colorful");
+            fundRefreshHandler.refreshColorful(colorful);
+            List<String> codes = loadFunds();
+            if (CollectionUtils.isEmpty(codes)) {
+                stop(); //如果没有数据则不需要启动时钟任务浪费资源
+            } else {
+                fundRefreshHandler.handle(codes);
+                QuartzManager quartzManager = QuartzManager.getInstance(NAME); // 时钟任务
+                HashMap<String, Object> dataMap = new HashMap<>();
+                dataMap.put(HandlerJob.KEY_HANDLER, fundRefreshHandler);
+                dataMap.put(HandlerJob.KEY_CODES, codes);
+                String cronExpression = instance.getValue("key_cron_expression_fund");
+                if (StringUtils.isEmpty(cronExpression)) {
+                    cronExpression = "0 * * * * ?";
+                }
+                quartzManager.runJob(HandlerJob.class, cronExpression, dataMap);
+            }
+        }
+    }
+
+    private static List<String> loadFunds() {
+//        return getConfigList("key_funds", "[,，]");
+        return SettingsWindow.getConfigList("key_funds");
+    }
+
+    public static void apply() {
+        if (fundRefreshHandler != null) {
+            PropertiesComponent instance = PropertiesComponent.getInstance();
+            fundRefreshHandler.setStriped(instance.getBoolean("key_table_striped"));
+            fundRefreshHandler.clearRow();
+            fundRefreshHandler.setupTable(loadFunds());
+            refresh();
+        }
+    }
+
+    public static void stop() {
+        QuartzManager.getInstance(NAME).stopJob();
+        if (fundRefreshHandler != null) {
+            fundRefreshHandler.stopHandle();
+        }
+    }
+
+    @Override
+    public boolean shouldBeAvailable(@NotNull Project project) {
+        return true;
+    }
+
+    @Override
+    public boolean isDoNotActivateOnStart() {
+        return true;
+    }
+
     @Override
     public void init(ToolWindow window) {
         // 重要：由于idea项目窗口可多个，导致FundWindow#init方法被多次调用，出现UI和逻辑错误(bug #53)，故加此判断解决
@@ -89,8 +144,7 @@ public class FundWindow implements ToolWindowFactory {
             LogUtil.info("Leeks UI已初始化");
             return;
         }
-
-        JLabel refreshTimeLabel = new JLabel();
+        refreshTimeLabel = new JLabel();
         refreshTimeLabel.setToolTipText("最后刷新时间");
         refreshTimeLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
         JBTable table = new JBTable();
@@ -171,60 +225,6 @@ public class FundWindow implements ToolWindowFactory {
         toolPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
         mPanel.add(toolPanel, BorderLayout.CENTER);
         apply();
-    }
 
-    private static List<String> loadFunds() {
-//        return getConfigList("key_funds", "[,，]");
-        return SettingsWindow.getConfigList("key_funds");
-    }
-
-    @Override
-    public boolean shouldBeAvailable(@NotNull Project project) {
-        return true;
-    }
-
-    @Override
-    public boolean isDoNotActivateOnStart() {
-        return true;
-    }
-
-    public static void apply() {
-        if (fundRefreshHandler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
-            fundRefreshHandler.setStriped(instance.getBoolean("key_table_striped"));
-            fundRefreshHandler.clearRow();
-            fundRefreshHandler.setupTable(loadFunds());
-            refresh();
-        }
-    }
-
-    public static void refresh() {
-        if (fundRefreshHandler != null) {
-            PropertiesComponent instance = PropertiesComponent.getInstance();
-            boolean colorful = instance.getBoolean("key_colorful");
-            fundRefreshHandler.refreshColorful(colorful);
-            List<String> codes = loadFunds();
-            if (CollectionUtils.isEmpty(codes)) {
-                stop(); //如果没有数据则不需要启动时钟任务浪费资源
-            } else {
-                fundRefreshHandler.handle(codes);
-                QuartzManager quartzManager = QuartzManager.getInstance(NAME); // 时钟任务
-                HashMap<String, Object> dataMap = new HashMap<>();
-                dataMap.put(HandlerJob.KEY_HANDLER, fundRefreshHandler);
-                dataMap.put(HandlerJob.KEY_CODES, codes);
-                String cronExpression = instance.getValue("key_cron_expression_fund");
-                if (StringUtils.isEmpty(cronExpression)) {
-                    cronExpression = "0 * * * * ?";
-                }
-                quartzManager.runJob(HandlerJob.class, cronExpression, dataMap);
-            }
-        }
-    }
-
-    public static void stop() {
-        QuartzManager.getInstance(NAME).stopJob();
-        if (fundRefreshHandler != null) {
-            fundRefreshHandler.stopHandle();
-        }
     }
 }

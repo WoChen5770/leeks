@@ -32,10 +32,10 @@ public class PopupsUiUtil {
             return;
         }
         // 图片接口
-        // 带水印  http://j4.dfcfw.com/charts/pic6/590008.png
-        // 无水印  http://j4.dfcfw.com/charts/pic7/590008.png
+        // 带水印  https://j4.dfcfw.com/charts/pic6/590008.png
+        // 无水印  https://j4.dfcfw.com/charts/pic7/590008.png
         // 暂时先硬编码，后续再优化调整
-        TabInfo tabInfo = new TabInfo(new JLabel(new ImageIcon(new URL(String.format("http://j4.dfcfw.com/charts/pic7/%s.png?%s",
+        TabInfo tabInfo = new TabInfo(new JLabel(new ImageIcon(new URL(String.format("https://j4.dfcfw.com/charts/pic7/%s.png?%s",
                 fundCode, System.currentTimeMillis())))));
         tabInfo.setText(type.getDesc());
         JBTabsImpl tabs = new JBTabsImpl(LogUtil.getProject());
@@ -54,23 +54,23 @@ public class PopupsUiUtil {
      */
     public static String getImageUrlByStock(String stockCode, StockShowType type) throws MalformedURLException {
         String prefix = StringUtils.substring(stockCode, 0, 2);
-        String url = "http://image.sinajs.cn/newchart/";
+        String url = "https://image.sinajs.cn/newchart/";
         switch (prefix) {
             case "sh":
             case "sz":
                 // 沪深股
-                // 分时线图  http://image.sinajs.cn/newchart/min/n/sh600519.gif
-                // 日K线图  http://image.sinajs.cn/newchart/daily/n/sh600519.gif
-                // 周K线图  http://image.sinajs.cn/newchart/weekly/n/sh600519.gif
-                // 月K线图  http://image.sinajs.cn/newchart/monthly/n/sh600519.gif
+                // 分时线图  https://image.sinajs.cn/newchart/min/n/sh600519.gif
+                // 日K线图  https://image.sinajs.cn/newchart/daily/n/sh600519.gif
+                // 周K线图  https://image.sinajs.cn/newchart/weekly/n/sh600519.gif
+                // 月K线图  https://image.sinajs.cn/newchart/monthly/n/sh600519.gif
                 url = String.format("%s/%s/n/%s.gif?%s", url, type.getType(), stockCode, System.currentTimeMillis());
                 break;
             case "us":
                 // 美股
-                // 分时线图 http://image.sinajs.cn/newchart/png/min/us/AAPL.png
-                // 日K线图 http://image.sinajs.cn/newchart/usstock/daily/aapl.gif
-                // 周K线图 http://image.sinajs.cn/newchart/usstock/weekly/aapl.gif
-                // 月K线图 http://image.sinajs.cn/newchart/usstock/monthly/aapl.gif
+                // 分时线图 https://image.sinajs.cn/newchart/png/min/us/AAPL.png
+                // 日K线图 https://image.sinajs.cn/newchart/usstock/daily/aapl.gif
+                // 周K线图 https://image.sinajs.cn/newchart/usstock/weekly/aapl.gif
+                // 月K线图 https://image.sinajs.cn/newchart/usstock/monthly/aapl.gif
                 if (StockShowType.min.equals(type)) {
                     url = String.format("%s/png/%s/%s/%s.png?%s", url, type.getType(), prefix, StringUtils.substring(stockCode, 2),
                             System.currentTimeMillis());
@@ -81,10 +81,10 @@ public class PopupsUiUtil {
                 break;
             case "hk":
                 // 港股
-                // 分时线图 http://image.sinajs.cn/newchart/png/min/hk/02202.png
-                // 日K线图 http://image.sinajs.cn/newchart/hk_stock/daily/02202.gif
-                // 周K线图 http://image.sinajs.cn/newchart/hk_stock/weekly/02202.gif
-                // 月K线图 http://image.sinajs.cn/newchart/hk_stock/monthly/02202.gif
+                // 分时线图 https://image.sinajs.cn/newchart/png/min/hk/02202.png
+                // 日K线图 https://image.sinajs.cn/newchart/hk_stock/daily/02202.gif
+                // 周K线图 https://image.sinajs.cn/newchart/hk_stock/weekly/02202.gif
+                // 月K线图 https://image.sinajs.cn/newchart/hk_stock/monthly/02202.gif
                 if (StockShowType.min.equals(type)) {
                     url = String.format("%s/png/%s/%s/%s.png?%s", url, type.getType(), prefix, StringUtils.substring(stockCode, 2),
                             System.currentTimeMillis());

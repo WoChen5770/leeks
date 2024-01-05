@@ -4,6 +4,8 @@ import bean.StockBean;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
 import utils.HttpClientPool;
 import utils.LogUtil;
 
@@ -18,13 +20,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SinaStockHandler extends StockRefreshHandler {
-    private final String URL = "http://hq.sinajs.cn/list=";
+    private final String URL = "https://hq.sinajs.cn/list=";
     private final Pattern DEFAULT_STOCK_PATTERN = Pattern.compile("var hq_str_(\\w+?)=\"(.*?)\";");
-    private final JLabel refreshTimeLabel;
 
-    public SinaStockHandler(JTable table, JLabel label) {
-        super(table);
-        this.refreshTimeLabel = label;
+    public SinaStockHandler(JTable table, JLabel refreshTimeLabel) {
+        super(table, refreshTimeLabel);
     }
 
     @Override
@@ -41,6 +41,12 @@ public class SinaStockHandler extends StockRefreshHandler {
         List<String> codeList = new ArrayList<>();
         Map<String, String[]> codeMap = new HashMap<>();
         for (String str : code) {
+            if (str.startsWith("hk")) {
+                str = "rt_" + str;
+            }
+            if (str.startsWith("us")) {
+                str = str.replace("us", "gb_").toLowerCase();
+            }
             //兼容原有设置
             String[] strArray;
             if (str.contains(",")) {
@@ -54,7 +60,8 @@ public class SinaStockHandler extends StockRefreshHandler {
 
         String params = Joiner.on(",").join(codeList);
         try {
-            String res = HttpClientPool.getHttpClient().get(URL + params);
+            Header header = new BasicHeader("Referer", "https://finance.sina.com.cn");
+            String res = HttpClientPool.getHttpClient().get(URL + params, header);
 //            String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS"));
 //            System.out.printf("%s,%s%n", time, res);
             handleResponse(res, codeMap);
@@ -64,23 +71,55 @@ public class SinaStockHandler extends StockRefreshHandler {
     }
 
     public void handleResponse(String response, Map<String, String[]> codeMap) {
-        List<String> refreshTimeList = new ArrayList<>();
         for (String line : response.split("\n")) {
             Matcher matcher = DEFAULT_STOCK_PATTERN.matcher(line);
             if (!matcher.matches()) {
                 continue;
             }
-            String code = matcher.group(1);
+            String code = matcher.group(1).toLowerCase();
             String[] split = matcher.group(2).split(",");
-            if (split.length < 32) {
-                continue;
-            }
-            StockBean bean = new StockBean(code, codeMap);
-            bean.setName(split[0]);
-            BigDecimal now = new BigDecimal(split[3]);
-            BigDecimal yesterday = new BigDecimal(split[2]);
-            BigDecimal diff = now.add(yesterday.negate());
+            StockBean bean = returnBean(code, split, new StockBean(code, codeMap));
 
+            updateData(bean);
+        }
+    }
+
+    @Override
+    public void stopHandle() {
+        LogUtil.info("leeks stock 自动刷新关闭!");
+    }
+
+    private StockBean returnBean(String code, String[] split, StockBean bean) {
+        try {
+            BigDecimal now = null, yesterday = null;
+            if (code.startsWith("sh") || code.startsWith("sz")) {
+                bean.setName(split[0]);
+                bean.setTime(Strings.repeat("0", 8) + split[31]);
+                bean.setMax(split[4]);
+                bean.setMin(split[5]);
+
+                now = new BigDecimal(split[3]);
+                yesterday = new BigDecimal(split[2]);
+            } else if (code.startsWith("rt_hk")) {
+                bean.setCode(code.replace("rt_", ""));
+                bean.setName(split[1]);
+                bean.setTime(split[17] + " " + split[18]);
+                bean.setMax(split[4]);
+                bean.setMin(split[5]);
+
+                now = new BigDecimal(split[6]);
+                yesterday = new BigDecimal(split[3]);
+            } else if (code.startsWith("gb_")) {
+                bean.setCode("us" + code.split("_")[1].toUpperCase());
+                bean.setName(split[0]);
+                bean.setTime(split[3]);
+                bean.setMax(split[6]);
+                bean.setMin(split[7]);
+
+                now = new BigDecimal(split[1]);
+                yesterday = new BigDecimal(split[26]);
+            }
+            BigDecimal diff = now.add(yesterday.negate());
             bean.setNow(now.toString());
             bean.setChange(diff.toString());
             BigDecimal percent = diff.divide(yesterday, 4, RoundingMode.HALF_UP)
@@ -88,14 +127,10 @@ public class SinaStockHandler extends StockRefreshHandler {
                     .multiply(BigDecimal.TEN)
                     .setScale(2, RoundingMode.HALF_UP);
             bean.setChangePercent(percent.toString());
-            bean.setTime(Strings.repeat("0", 8) + split[31]);
-            bean.setMax(split[4]);
-            bean.setMin(split[5]);
-
             String costPriceStr = bean.getCostPrise();
             if (StringUtils.isNotEmpty(costPriceStr)) {
                 BigDecimal costPriceDec = new BigDecimal(costPriceStr);
-                BigDecimal incomeDiff = now.add(costPriceDec.negate());
+                BigDecimal incomeDiff = BigDecimal.valueOf(Double.parseDouble(bean.getNow())).add(costPriceDec.negate());
                 BigDecimal incomePercentDec = incomeDiff.divide(costPriceDec, 5, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.TEN)
                         .multiply(BigDecimal.TEN)
@@ -110,17 +145,9 @@ public class SinaStockHandler extends StockRefreshHandler {
                     bean.setIncome(incomeDec.toString());
                 }
             }
-
-            updateData(bean);
-            refreshTimeList.add(split[31]);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        String text = refreshTimeList.stream().sorted().findFirst().orElse("");
-        SwingUtilities.invokeLater(() -> refreshTimeLabel.setText(text));
-    }
-
-    @Override
-    public void stopHandle() {
-        LogUtil.info("leeks stock 自动刷新关闭!");
+        return bean;
     }
 }

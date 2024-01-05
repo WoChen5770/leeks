@@ -3,8 +3,6 @@ package bean;
 import org.apache.commons.lang3.StringUtils;
 import utils.PinYinUtils;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Objects;
 
@@ -25,7 +23,7 @@ public class StockBean {
     private String min;
 
     private String costPrise;//成本价
-//    private String cost;//成本
+    //    private String cost;//成本
     private String bonds;//持仓
     private String incomePercent;//收益率
     private String income;//收益
@@ -54,9 +52,9 @@ public class StockBean {
         this.name = "--";
     }
 
-    public StockBean(String code, Map<String, String[]> codeMap){
+    public StockBean(String code, Map<String, String[]> codeMap) {
         this.code = code;
-        if(codeMap.containsKey(code)){
+        if (codeMap.containsKey(code)) {
             String[] codeStr = codeMap.get(code);
             if (codeStr.length > 2) {
                 this.code = codeStr[0];
@@ -226,10 +224,13 @@ public class StockBean {
                 return this.getIncome();
             case "更新时间":
                 String timeStr = "--";
-                if (this.getTime() != null) {
+                if (this.getTime() != null && !this.getTime().contains(" ")) {
                     timeStr = this.getTime().substring(8);
                 }
-                return timeStr;
+                if (this.getTime() != null && this.getTime().contains(" ")) {
+                    timeStr = this.getTime().split(" ")[1];
+                }
+                return timeStr.length() == 6 ? String.format("%s:%s:%s", timeStr.substring(0, 2), timeStr.substring(2, 4), timeStr.substring(4, 6)) : timeStr;
             default:
                 return "";
 

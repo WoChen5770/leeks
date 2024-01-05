@@ -84,7 +84,7 @@
                     <properties>
                       <lineWrap value="true"/>
                       <minimumSize width="370" height="17"/>
-                      <preferredSize width="370" height="190"/>
+                      <preferredSize width="370" height="210"/>
                       <rows value="10"/>
                       <text value=""/>
                       <toolTipText value="基金编码，英文分号分隔（持仓成本价和持仓份额跟在基金编码后，用英文逗号分隔），例如:【001632,3.2050,951.64;002340,4.2820,467.07】"/>
@@ -157,7 +157,7 @@
                     <properties>
                       <lineWrap value="true"/>
                       <minimumSize width="370" height="17"/>
-                      <preferredSize width="370" height="190"/>
+                      <preferredSize width="370" height="210"/>
                       <rows value="10"/>
                       <toolTipText value="股票编码，英文逗号分隔，例如：【sh000001,12.451,1200;hk00700,13.412,2000】"/>
                     </properties>
@@ -229,7 +229,7 @@
                     <properties>
                       <lineWrap value="true"/>
                       <minimumSize width="370" height="17"/>
-                      <preferredSize width="370" height="190"/>
+                      <preferredSize width="370" height="210"/>
                       <rows value="10"/>
                       <toolTipText value="英文逗号分隔，例如：【BTC-USD,DOGE-USD】注意编码大写，一般格式为[币编码-USD]"/>
                     </properties>
@@ -269,7 +269,7 @@
           <forms/>
         </constraints>
         <properties>
-          <text value="Leeks V2.2.0"/>
+          <text value="Leeks V2.3.0"/>
         </properties>
       </component>
       <grid id="b17a5" layout-manager="FlowLayout" hgap="30" vgap="5" flow-align="0">
@@ -293,7 +293,7 @@
             <properties>
               <horizontalAlignment value="2"/>
               <horizontalTextPosition value="2"/>
-              <text value="采用新浪股票接口(无港股美股数据)"/>
+              <text value="采用新浪股票接口(默认腾讯接口)"/>
             </properties>
           </component>
           <component id="3e6da" class="javax.swing.JCheckBox" binding="checkboxLog">

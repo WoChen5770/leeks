@@ -8,7 +8,6 @@ import utils.LogUtil;
 import javax.swing.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,17 +15,14 @@ import java.util.List;
 public class TencentStockHandler extends StockRefreshHandler {
     private String urlPara;
     private HashMap<String, String[]> codeMap;
-    private JLabel refreshTimeLabel;
 
 
     public TencentStockHandler(JTable table1, JLabel refreshTimeLabel) {
-        super(table1);
-        this.refreshTimeLabel = refreshTimeLabel;
+        super(table1, refreshTimeLabel);
     }
 
     @Override
     public void handle(List<String> code) {
-
         //LogUtil.info("Leeks 更新Stock编码数据.");
 //        clearRow();
         if (code.isEmpty()) {
@@ -37,6 +33,9 @@ public class TencentStockHandler extends StockRefreshHandler {
         List<String> codeList = new ArrayList<>();
         codeMap = new HashMap<>();
         for (String str : code) {
+            if (str.startsWith("hk") || str.startsWith("us")) {
+                str = "r_" + str;
+            }
             //兼容原有设置
             String[] strArray;
             if (str.contains(",")) {
@@ -63,9 +62,8 @@ public class TencentStockHandler extends StockRefreshHandler {
             return;
         }
         try {
-            String result = HttpClientPool.getHttpClient().get("http://qt.gtimg.cn/q=" + urlPara);
+            String result = HttpClientPool.getHttpClient().get("https://qt.gtimg.cn/q=" + urlPara);
             parse(result);
-            updateUI();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -77,7 +75,7 @@ public class TencentStockHandler extends StockRefreshHandler {
             String code = line.substring(line.indexOf("_") + 1, line.indexOf("="));
             String dataStr = line.substring(line.indexOf("=") + 2, line.length() - 2);
             String[] values = dataStr.split("~");
-            StockBean bean = new StockBean(code, codeMap);
+            StockBean bean = new StockBean(code.replace("r_", ""), codeMap);
             bean.setName(values[1]);
             bean.setNow(values[3]);
             bean.setChange(values[31]);
@@ -112,16 +110,6 @@ public class TencentStockHandler extends StockRefreshHandler {
 
             updateData(bean);
         }
-    }
-
-    public void updateUI() {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                refreshTimeLabel.setText(LocalDateTime.now().format(TianTianFundHandler.timeFormatter));
-                refreshTimeLabel.setToolTipText("最后刷新时间");
-            }
-        });
     }
 
 

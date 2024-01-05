@@ -14,6 +14,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.*;
 
@@ -26,7 +27,7 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
 
     private JTable table;
     private boolean colorful = true;
-
+    static JLabel refreshTimeLabel;
     static {
         PropertiesComponent instance = PropertiesComponent.getInstance();
         String tableHeader = instance.getValue(WindowUtils.FUND_TABLE_HEADER_KEY);
@@ -49,8 +50,9 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
         }
     }
 
-    public FundRefreshHandler(JTable table) {
+    public FundRefreshHandler(JTable table, JLabel refreshTimeLabel) {
         this.table = table;
+        this.refreshTimeLabel = refreshTimeLabel;
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         // Fix tree row height
         FontMetrics metrics = table.getFontMetrics(table.getFont());
@@ -155,6 +157,13 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
         table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
     }
 
+    private static void updateUI() {
+        SwingUtilities.invokeLater(() -> {
+            refreshTimeLabel.setText(LocalDateTime.now().format(TianTianFundHandler.timeFormatter));
+            refreshTimeLabel.setToolTipText("最后刷新时间");
+        });
+    }
+
     protected void updateData(FundBean bean) {
         if (bean.getFundCode() == null) {
             return;
@@ -170,8 +179,8 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
         } else {
             addRow(convertData);
         }
+        updateUI();
     }
-
     /**
      * 参考源码{@link DefaultTableModel#setValueAt}，此为直接更新行，提高点效率
      *
