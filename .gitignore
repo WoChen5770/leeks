@@ -4,3 +4,9 @@
 /build/classes/java/main/
 /.idea/
 /out/
+.claude
+.claude/*
+.codefree
+.intellijPlatform
+build
+.gradle-user-home
