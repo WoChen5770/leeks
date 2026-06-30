@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.*;
 
 public abstract class StockRefreshHandler extends DefaultTableModel {
-    private static String[] columnNames;
+    private String[] columnNames = new String[0];
     /**
      * 存放【编码】的位置，更新数据时用到
      */
@@ -27,13 +27,36 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
 
     private JTable table;
     private boolean colorful = true;
+    private boolean showReturn = true;
     static JLabel refreshTimeLabel;
-    static {
+
+    private static final Set<String> STOCK_RETURN_COLUMNS = new HashSet<>(Arrays.asList("成本价", "持仓", "收益率", "收益"));
+
+    public StockRefreshHandler(JTable table, JLabel refreshTimeLabel) {
+        this.table = table;
+        StockRefreshHandler.refreshTimeLabel = refreshTimeLabel;
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        // Fix tree row height
+        FontMetrics metrics = table.getFontMetrics(table.getFont());
+        table.setRowHeight(Math.max(table.getRowHeight(), metrics.getHeight()));
+        table.setModel(this);
+        reloadColumnNames();
+        refreshColorful(!colorful);
+    }
+
+    public void reloadColumnNames() {
         PropertiesComponent instance = PropertiesComponent.getInstance();
         String tableHeaderValue = instance.getValue(WindowUtils.STOCK_TABLE_HEADER_KEY);
         if (StringUtils.isBlank(tableHeaderValue)) {
-            instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, WindowUtils.STOCK_TABLE_HEADER_VALUE);
             tableHeaderValue = WindowUtils.STOCK_TABLE_HEADER_VALUE;
+        }
+        String migratedTableHeaderValue = migrateTableHeader(tableHeaderValue);
+        if (!StringUtils.equals(tableHeaderValue, migratedTableHeaderValue)) {
+            instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, migratedTableHeaderValue);
+            tableHeaderValue = migratedTableHeaderValue;
+        } else if (StringUtils.isBlank(instance.getValue(WindowUtils.STOCK_TABLE_HEADER_KEY))) {
+            instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, migratedTableHeaderValue);
+            tableHeaderValue = migratedTableHeaderValue;
         }
 
         String[] configStr = tableHeaderValue.split(",");
@@ -41,37 +64,71 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
         for (int i = 0; i < configStr.length; i++) {
             columnNames[i] = WindowUtils.remapPinYin(configStr[i]);
         }
+        refreshCodeColumnIndex();
+        refreshColorful(colorful, showReturn, true);
     }
 
-    {
+    private String migrateTableHeader(String tableHeaderValue) {
+        List<String> columns = new ArrayList<>();
+        for (String column : tableHeaderValue.split(",")) {
+            if (StringUtils.isBlank(column)) {
+                continue;
+            }
+            columns.add(WindowUtils.remapPinYin(column));
+        }
+        if (columns.isEmpty()) {
+            columns.addAll(Arrays.asList(WindowUtils.STOCK_TABLE_HEADER_VALUE.split(",")));
+        }
+        if (!columns.contains("封单量")) {
+            int insertIndex = columns.indexOf("成本价");
+            if (insertIndex < 0) {
+                insertIndex = columns.indexOf("更新时间");
+            }
+            if (insertIndex < 0) {
+                insertIndex = columns.size();
+            }
+            columns.add(insertIndex, "封单量");
+        }
+        return String.join(",", columns);
+    }
+
+    private void refreshCodeColumnIndex() {
+        codeColumnIndex = 0;
         for (int i = 0; i < columnNames.length; i++) {
             if ("编码".equals(columnNames[i])) {
                 codeColumnIndex = i;
+                return;
             }
         }
     }
 
-    public StockRefreshHandler(JTable table, JLabel refreshTimeLabel) {
-        this.table = table;
-        this.refreshTimeLabel = refreshTimeLabel;
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        // Fix tree row height
-        FontMetrics metrics = table.getFontMetrics(table.getFont());
-        table.setRowHeight(Math.max(table.getRowHeight(), metrics.getHeight()));
-        table.setModel(this);
-        refreshColorful(!colorful);
+    private String[] getDisplayColumnNames() {
+        if (showReturn) {
+            return columnNames;
+        }
+        String[] filtered = Arrays.stream(columnNames)
+                .filter(name -> !STOCK_RETURN_COLUMNS.contains(name))
+                .toArray(String[]::new);
+        return filtered;
     }
 
     public void refreshColorful(boolean colorful) {
-        if (this.colorful == colorful) {
+        refreshColorful(colorful, showReturn, false);
+    }
+
+    private void refreshColorful(boolean colorful, boolean showReturn, boolean forceRefresh) {
+        boolean showReturnChanged = this.showReturn != showReturn;
+        this.showReturn = showReturn;
+        String[] displayColumns = getDisplayColumnNames();
+        if (!forceRefresh && this.colorful == colorful && !showReturnChanged) {
             return;
         }
         this.colorful = colorful;
         // 刷新表头
         if (colorful) {
-            setColumnIdentifiers(columnNames);
+            setColumnIdentifiers(displayColumns);
         } else {
-            setColumnIdentifiers(PinYinUtils.toPinYin(columnNames));
+            setColumnIdentifiers(PinYinUtils.toPinYin(displayColumns));
         }
         TableRowSorter<DefaultTableModel> rowSorter = new TableRowSorter<>(this);
         Comparator<Object> doubleComparator = (o1, o2) -> {
@@ -79,10 +136,14 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
             Double v2 = NumberUtils.toDouble(StringUtils.remove((String) o2, '%'));
             return v1.compareTo(v2);
         };
-        Arrays.stream("当前价,涨跌,涨跌幅,最高价,最低价".split(",")).map(name -> WindowUtils.getColumnIndexByName(columnNames, name))
+        Arrays.stream("当前价,涨跌,涨跌幅,最高价,最低价,封单量".split(",")).map(name -> WindowUtils.getColumnIndexByName(displayColumns, name))
                 .filter(index -> index >= 0).forEach(index -> rowSorter.setComparator(index, doubleComparator));
         table.setRowSorter(rowSorter);
         columnColors(colorful);
+    }
+
+    public void setShowReturn(boolean showReturn) {
+        refreshColorful(colorful, showReturn, false);
     }
 
     /**
@@ -141,17 +202,18 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
                 return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             }
         };
-        int columnIndex1 = WindowUtils.getColumnIndexByName(columnNames, "涨跌");
-        int columnIndex2 = WindowUtils.getColumnIndexByName(columnNames, "涨跌幅");
+        String[] displayColumns = getDisplayColumnNames();
+        int columnIndex1 = WindowUtils.getColumnIndexByName(displayColumns, "涨跌");
+        int columnIndex2 = WindowUtils.getColumnIndexByName(displayColumns, "涨跌幅");
 
-        int columnIndex3 = WindowUtils.getColumnIndexByName(columnNames, "收益率");
-        int columnIndex4 = WindowUtils.getColumnIndexByName(columnNames, "收益");
+        int columnIndex3 = WindowUtils.getColumnIndexByName(displayColumns, "收益率");
+        int columnIndex4 = WindowUtils.getColumnIndexByName(displayColumns, "收益");
 
-        table.getColumn(getColumnName(columnIndex1)).setCellRenderer(cellRenderer);
-        table.getColumn(getColumnName(columnIndex2)).setCellRenderer(cellRenderer);
+        if (columnIndex1 >= 0) table.getColumn(getColumnName(columnIndex1)).setCellRenderer(cellRenderer);
+        if (columnIndex2 >= 0) table.getColumn(getColumnName(columnIndex2)).setCellRenderer(cellRenderer);
 
-        table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
-        table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
+        if (columnIndex3 >= 0) table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
+        if (columnIndex4 >= 0) table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
     }
 
     private static void updateUI() {
@@ -225,9 +287,10 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
             return null;
         }
         // 与columnNames中的元素保持一致
-        Vector<Object> v = new Vector<Object>(columnNames.length);
-        for (int i = 0; i < columnNames.length; i++) {
-            v.addElement(stockBean.getValueByColumn(columnNames[i], colorful));
+        String[] displayColumns = getDisplayColumnNames();
+        Vector<Object> v = new Vector<Object>(displayColumns.length);
+        for (int i = 0; i < displayColumns.length; i++) {
+            v.addElement(stockBean.getValueByColumn(displayColumns[i], colorful));
         }
         return v;
     }

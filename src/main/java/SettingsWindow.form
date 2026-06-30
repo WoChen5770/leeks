@@ -269,7 +269,7 @@
           <forms/>
         </constraints>
         <properties>
-          <text value="Leeks V2.3.0"/>
+          <text value="Leeks V2.4.0"/>
         </properties>
       </component>
       <grid id="b17a5" layout-manager="FlowLayout" hgap="30" vgap="5" flow-align="0">
@@ -302,6 +302,14 @@
               <horizontalAlignment value="2"/>
               <horizontalTextPosition value="2"/>
               <text value="关闭日志"/>
+            </properties>
+          </component>
+          <component id="f7a2b" class="javax.swing.JCheckBox" binding="checkBoxShowReturn">
+            <constraints/>
+            <properties>
+              <horizontalAlignment value="2"/>
+              <horizontalTextPosition value="2"/>
+              <text value="收益显示"/>
             </properties>
           </component>
         </children>

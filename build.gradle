@@ -1,55 +1,64 @@
 plugins {
     id 'java'
-    id 'org.jetbrains.intellij' version '1.13.3'
+    id 'org.jetbrains.intellij.platform' version '2.17.0'
 }
 
 group 'com.huage2580'
-version '2.3.0'
-
-sourceCompatibility = 17
+version '2.5.0'
 
 repositories {
     mavenCentral()
-    jcenter()
-}
-
-dependencies {
-    testImplementation group: 'junit', name: 'junit', version: '4.12'
-    implementation 'com.github.promeg:tinypinyin:2.0.3' // TinyPinyin核心包，约80KB
-    implementation group: 'org.quartz-scheduler', name: 'quartz', version: '2.3.2', {
-     exclude group:'com.zaxxer'
-     exclude group:'org.slf4j' // 与idea自带的冲突
-     exclude group:'com.mchange'
+    intellijPlatform {
+        defaultRepositories()
     }
 }
 
-// See https://github.com/JetBrains/gradle-intellij-plugin/
-intellij {
-//    version '2023.3.1'
-    localPath.set('D:\\JetBrains\\Toolbox\\IntelliJ IDEA Ultimate 2')
-    intellij.setUpdateSinceUntilBuild(true)
-    intellij.setSameSinceUntilBuild(false)
-}
-patchPluginXml {
-    changeNotes.set("""
-        v1.1 增加了股票的tab，采用腾讯的行情接口，股票轮询间隔10s  <br>
-        v1.2 支持了港股和美股 示例代码：（sh000001,sh600519,sz000001,hk00700,usAAPL）代码一般可以在各网页端看得到  <br>
-        v1.3 支持了IDEA 2020.1.3,兼容到`IDEA 2017.3`，修复macOS 行高问题（不确定 <br>
-        v1.4 增加了隐蔽模式（全拼音和无色涨跌幅<br>
-        v1.5 增加了股票界面的排序~，可按净值和涨跌幅等列排序<br>
-        v1.6 样式修改，增加精确净值（当日，上一交易日)<br>
-        v1.7 设置界面样式调整，增加新浪股票接口备选<br>
-
-        v2.2 适配IDEA 2023.3 -- by: WoChen5770<br>
-        v2.3 修复腾讯港股接口数据延迟15分钟的问题<br>
-             新浪股票接口支持港股、美股<br>
-             -- by: WoChen5770<br>
-      """)
-    sinceBuild.set('173.*')  //最低版本限制
-    untilBuild.set(null) //最高版本限制 好像必须指定
+dependencies {
+    testImplementation 'junit:junit:4.12'
+    implementation 'io.github.biezhi:TinyPinyin:2.0.3.RELEASE'
+    implementation(group: 'org.quartz-scheduler', name: 'quartz', version: '2.3.2') {
+        exclude group: 'com.zaxxer'
+        exclude group: 'org.slf4j' // 与idea自带的冲突
+        exclude group: 'com.mchange'
+    }
+    intellijPlatform {
+        local 'D:\\JetBrains\\IntelliJ IDEA'
+    }
 }
 
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
+intellijPlatform {
+    buildSearchableOptions = false
+
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = '261'
+            untilBuild = provider { null }
+        }
+
+        changeNotes = """
+            v1.1 增加了股票的tab，采用腾讯的行情接口，股票轮询间隔10s  <br>
+            v1.2 支持了港股和美股 示例代码：（sh000001,sh600519,sz000001,hk00700,usAAPL）代码一般可以在各网页端看得到  <br>
+            v1.3 支持了IDEA 2020.1.3,兼容到`IDEA 2017.3`，修复macOS 行高问题（不确定 <br>
+            v1.4 增加了隐蔽模式（全拼音和无色涨跌幅<br>
+            v1.5 增加了股票界面的排序~，可按净值和涨跌幅等列排序<br>
+            v1.6 样式修改，增加精确净值（当日，上一交易日)<br>
+            v1.7 设置界面样式调整，增加新浪股票接口备选<br>
+
+            v2.2 适配IDEA 2023.3 -- by: WoChen5770<br>
+            v2.3 修复腾讯港股接口数据延迟15分钟的问题<br>
+                 新浪股票接口支持港股、美股<br>
+                 -- by: WoChen5770<br>
+            v2.5 新增「显示收益」开关，关闭后隐藏成本价/持仓/收益率/收益列<br>
+                新增「封单量」列，涨停显示买一量，跌停显示卖一量，支持排序<br>
+                修复 TinyPinyin 依赖坐标<br>
+                -- by: WoChen5770<br>
+        """.stripIndent().trim()
+    }
 }
-buildSearchableOptions.enabled = false
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+    options.release = 21
+}

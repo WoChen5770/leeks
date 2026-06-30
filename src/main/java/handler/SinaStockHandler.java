@@ -127,6 +127,29 @@ public class SinaStockHandler extends StockRefreshHandler {
                     .multiply(BigDecimal.TEN)
                     .setScale(2, RoundingMode.HALF_UP);
             bean.setChangePercent(percent.toString());
+
+            // 封单量：卖一量为0则涨停（封单=买一量÷100），买一量为0则跌停（封单=卖一量÷100）
+            try {
+                if (code.startsWith("sh") || code.startsWith("sz")) {
+                    String buy1Vol = split[10];
+                    String sell1Vol = split[20];
+                    if ("0".equals(buy1Vol) && "0".equals(sell1Vol)) {
+                        bean.setLimitVolume("");
+                    } else if ("0".equals(sell1Vol) && StringUtils.isNotBlank(buy1Vol)) {
+                        BigDecimal vol = new BigDecimal(buy1Vol).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                        bean.setLimitVolume(vol.toString());
+                    } else if ("0".equals(buy1Vol) && StringUtils.isNotBlank(sell1Vol)) {
+                        BigDecimal vol = new BigDecimal(sell1Vol).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+                        bean.setLimitVolume(vol.toString());
+                    } else {
+                        bean.setLimitVolume("--");
+                    }
+                } else {
+                    bean.setLimitVolume("--");
+                }
+            } catch (NumberFormatException e) {
+                bean.setLimitVolume("--");
+            }
             String costPriceStr = bean.getCostPrise();
             if (StringUtils.isNotEmpty(costPriceStr)) {
                 BigDecimal costPriceDec = new BigDecimal(costPriceStr);

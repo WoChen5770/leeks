@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.*;
 
 public abstract class FundRefreshHandler extends DefaultTableModel {
-    private static String[] columnNames;
+    private String[] columnNames = new String[0];
     /**
      * 存放【编码】的位置，更新数据时用到
      */
@@ -27,50 +27,75 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
 
     private JTable table;
     private boolean colorful = true;
+    private boolean showReturn = true;
     static JLabel refreshTimeLabel;
-    static {
+
+    private static final Set<String> FUND_RETURN_COLUMNS = new HashSet<>(Arrays.asList("持仓成本价", "持有份额", "收益率", "收益"));
+
+    public FundRefreshHandler(JTable table, JLabel refreshTimeLabel) {
+        this.table = table;
+        FundRefreshHandler.refreshTimeLabel = refreshTimeLabel;
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        // Fix tree row height
+        FontMetrics metrics = table.getFontMetrics(table.getFont());
+        table.setRowHeight(Math.max(table.getRowHeight(), metrics.getHeight()));
+        table.setModel(this);
+        reloadColumnNames();
+        refreshColorful(!colorful);
+    }
+
+    public void reloadColumnNames() {
         PropertiesComponent instance = PropertiesComponent.getInstance();
         String tableHeader = instance.getValue(WindowUtils.FUND_TABLE_HEADER_KEY);
         if (StringUtils.isBlank(tableHeader)) {
-            instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, WindowUtils.FUND_TABLE_HEADER_VALUE);
             tableHeader = WindowUtils.FUND_TABLE_HEADER_VALUE;
+            instance.setValue(WindowUtils.FUND_TABLE_HEADER_KEY, tableHeader);
         }
         String[] configStr = tableHeader.split(",");
         columnNames = new String[configStr.length];
         for (int i = 0; i < configStr.length; i++) {
             columnNames[i] = WindowUtils.remapPinYin(configStr[i]);
         }
+        refreshCodeColumnIndex();
+        refreshColorful(colorful, showReturn, true);
     }
 
-    {
+    private void refreshCodeColumnIndex() {
+        codeColumnIndex = 0;
         for (int i = 0; i < columnNames.length; i++) {
             if ("编码".equals(columnNames[i])) {
                 codeColumnIndex = i;
+                return;
             }
         }
     }
 
-    public FundRefreshHandler(JTable table, JLabel refreshTimeLabel) {
-        this.table = table;
-        this.refreshTimeLabel = refreshTimeLabel;
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        // Fix tree row height
-        FontMetrics metrics = table.getFontMetrics(table.getFont());
-        table.setRowHeight(Math.max(table.getRowHeight(), metrics.getHeight()));
-        table.setModel(this);
-        refreshColorful(!colorful);
+    private String[] getDisplayColumnNames() {
+        if (showReturn) {
+            return columnNames;
+        }
+        return Arrays.stream(columnNames)
+                .filter(name -> !FUND_RETURN_COLUMNS.contains(name))
+                .toArray(String[]::new);
     }
 
     public void refreshColorful(boolean colorful) {
-        if (this.colorful == colorful) {
+        refreshColorful(colorful, showReturn, false);
+    }
+
+    private void refreshColorful(boolean colorful, boolean showReturn, boolean forceRefresh) {
+        boolean showReturnChanged = this.showReturn != showReturn;
+        this.showReturn = showReturn;
+        String[] displayColumns = getDisplayColumnNames();
+        if (!forceRefresh && this.colorful == colorful && !showReturnChanged) {
             return;
         }
         this.colorful = colorful;
         // 刷新表头
         if (colorful) {
-            setColumnIdentifiers(columnNames);
+            setColumnIdentifiers(displayColumns);
         } else {
-            setColumnIdentifiers(PinYinUtils.toPinYin(columnNames));
+            setColumnIdentifiers(PinYinUtils.toPinYin(displayColumns));
         }
         TableRowSorter<DefaultTableModel> rowSorter = new TableRowSorter<>(this);
         Comparator<Object> doubleComparator = (o1, o2) -> {
@@ -78,10 +103,14 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
             Double v2 = NumberUtils.toDouble(StringUtils.remove((String) o2, '%'));
             return v1.compareTo(v2);
         };
-        Arrays.stream("估算净值,估算涨跌".split(",")).map(name -> WindowUtils.getColumnIndexByName(columnNames, name))
+        Arrays.stream("估算净值,估算涨跌".split(",")).map(name -> WindowUtils.getColumnIndexByName(displayColumns, name))
                 .filter(index -> index >= 0).forEach(index -> rowSorter.setComparator(index, doubleComparator));
         table.setRowSorter(rowSorter);
         columnColors(colorful);
+    }
+
+    public void setShowReturn(boolean showReturn) {
+        refreshColorful(colorful, showReturn, false);
     }
 
     /**
@@ -145,16 +174,16 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
                 return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             }
         };
-//        table.getColumn(getColumnName(2)).setCellRenderer(cellRenderer);
-        int columnIndex = WindowUtils.getColumnIndexByName(columnNames, "估算涨跌");
+        String[] displayColumns = getDisplayColumnNames();
+        int columnIndex = WindowUtils.getColumnIndexByName(displayColumns, "估算涨跌");
 
-        int columnIndex3 = WindowUtils.getColumnIndexByName(columnNames, "收益率");
-        int columnIndex4 = WindowUtils.getColumnIndexByName(columnNames, "收益");
+        int columnIndex3 = WindowUtils.getColumnIndexByName(displayColumns, "收益率");
+        int columnIndex4 = WindowUtils.getColumnIndexByName(displayColumns, "收益");
 
-        table.getColumn(getColumnName(columnIndex)).setCellRenderer(cellRenderer);
+        if (columnIndex >= 0) table.getColumn(getColumnName(columnIndex)).setCellRenderer(cellRenderer);
 
-        table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
-        table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
+        if (columnIndex3 >= 0) table.getColumn(getColumnName(columnIndex3)).setCellRenderer(cellRenderer);
+        if (columnIndex4 >= 0) table.getColumn(getColumnName(columnIndex4)).setCellRenderer(cellRenderer);
     }
 
     private static void updateUI() {
@@ -228,9 +257,10 @@ public abstract class FundRefreshHandler extends DefaultTableModel {
             return null;
         }
         // 与columnNames中的元素保持一致
-        Vector<Object> v = new Vector<Object>(columnNames.length);
-        for (int i = 0; i < columnNames.length; i++) {
-            v.addElement(fundBean.getValueByColumn(columnNames[i], colorful));
+        String[] displayColumns = getDisplayColumnNames();
+        Vector<Object> v = new Vector<Object>(displayColumns.length);
+        for (int i = 0; i < displayColumns.length; i++) {
+            v.addElement(fundBean.getValueByColumn(displayColumns[i], colorful));
         }
         return v;
     }

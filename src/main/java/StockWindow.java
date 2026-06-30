@@ -153,8 +153,10 @@ public class StockWindow {
     public static void apply() {
         if (handler != null) {
             handler = factoryHandler();
+            handler.reloadColumnNames();
             PropertiesComponent instance = PropertiesComponent.getInstance();
             handler.setStriped(instance.getBoolean("key_table_striped"));
+            handler.setShowReturn(instance.getBoolean("key_show_return", true));
             handler.clearRow();
             handler.setupTable(loadStocks());
             refresh();
@@ -164,6 +166,7 @@ public class StockWindow {
         if (handler != null) {
             PropertiesComponent instance = PropertiesComponent.getInstance();
             handler.refreshColorful(instance.getBoolean("key_colorful"));
+            handler.setShowReturn(instance.getBoolean("key_show_return", true));
             List<String> codes = loadStocks();
             if (CollectionUtils.isEmpty(codes)) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源

@@ -84,6 +84,20 @@ public class TencentStockHandler extends StockRefreshHandler {
             bean.setMax(values[33]);//33
             bean.setMin(values[34]);//34
 
+            // 封单量：卖一为0则涨停（封单=买一量），买一为0则跌停（封单=卖一量）
+            // values[9]=买一价, values[10]=买一量, values[19]=卖一价, values[20]=卖一量
+            String buy1Vol = values[10];
+            String sell1Vol = values[20];
+            if ("0".equals(buy1Vol) && "0".equals(sell1Vol)) {
+                bean.setLimitVolume("");
+            } else if ("0".equals(sell1Vol)) {
+                bean.setLimitVolume(buy1Vol); // 涨停，封单=买一量
+            } else if ("0".equals(buy1Vol)) {
+                bean.setLimitVolume(sell1Vol); // 跌停，封单=卖一量
+            } else {
+                bean.setLimitVolume("--");
+            }
+
             BigDecimal now = new BigDecimal(values[3]);
             String costPriceStr = bean.getCostPrise();
             if (StringUtils.isNotEmpty(costPriceStr)) {

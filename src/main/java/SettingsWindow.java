@@ -36,44 +36,64 @@ public class SettingsWindow  implements Configurable {
     private JLabel proxyLabel;
     private JTextField inputProxy;
     private JButton proxyTestButton;
+    private JCheckBox checkBoxShowReturn;
 
     @Override
     public @Nls String getDisplayName() {
         return "Leeks";
     }
 
-    @Override
-    public @Nullable JComponent createComponent() {
+    private void loadSettings() {
         PropertiesComponent instance = PropertiesComponent.getInstance();
-        String value = instance.getValue("key_funds");
-        String value_stock = instance.getValue("key_stocks");
-        String value_coin = instance.getValue("key_coins");
-        boolean value_color = instance.getBoolean("key_colorful");
-        textAreaFund.setText(value);
-        textAreaStock.setText(value_stock);
-        textAreaCoin.setText(value_coin);
-        checkbox.setSelected(!value_color);
+        textAreaFund.setText(instance.getValue("key_funds"));
+        textAreaStock.setText(instance.getValue("key_stocks"));
+        textAreaCoin.setText(instance.getValue("key_coins"));
+        checkbox.setSelected(!instance.getBoolean("key_colorful"));
         checkBoxTableStriped.setSelected(instance.getBoolean("key_table_striped"));
         checkboxSina.setSelected(instance.getBoolean("key_stocks_sina"));
         checkboxLog.setSelected(instance.getBoolean("key_close_log"));
-        cronExpressionFund.setText(instance.getValue("key_cron_expression_fund","0 * * * * ?")); //默认每分钟执行
-        cronExpressionStock.setText(instance.getValue("key_cron_expression_stock","*/10 * * * * ?")); //默认每10秒执行
-        cronExpressionCoin.setText(instance.getValue("key_cron_expression_coin","*/10 * * * * ?")); //默认每10秒执行
-        //代理设置
+        checkBoxShowReturn.setSelected(instance.getBoolean("key_show_return", true));
+        cronExpressionFund.setText(instance.getValue("key_cron_expression_fund", "0 * * * * ?")); //默认每分钟执行
+        cronExpressionStock.setText(instance.getValue("key_cron_expression_stock", "*/10 * * * * ?")); //默认每10秒执行
+        cronExpressionCoin.setText(instance.getValue("key_cron_expression_coin", "*/10 * * * * ?")); //默认每10秒执行
         inputProxy.setText(instance.getValue("key_proxy"));
-        proxyTestButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                String proxy = inputProxy.getText().trim();
-                testProxy(proxy);
-            }
-        });
+    }
+
+    @Override
+    public @Nullable JComponent createComponent() {
+        loadSettings();
+        if (proxyTestButton.getActionListeners().length == 0) {
+            proxyTestButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent actionEvent) {
+                    String proxy = inputProxy.getText().trim();
+                    testProxy(proxy);
+                }
+            });
+        }
         return panel1;
     }
 
     @Override
     public boolean isModified() {
-        return true;
+        PropertiesComponent instance = PropertiesComponent.getInstance();
+        return !StringUtils.equals(StringUtils.defaultString(textAreaFund.getText()), StringUtils.defaultString(instance.getValue("key_funds")))
+                || !StringUtils.equals(StringUtils.defaultString(textAreaStock.getText()), StringUtils.defaultString(instance.getValue("key_stocks")))
+                || !StringUtils.equals(StringUtils.defaultString(textAreaCoin.getText()), StringUtils.defaultString(instance.getValue("key_coins")))
+                || checkbox.isSelected() == instance.getBoolean("key_colorful")
+                || checkBoxTableStriped.isSelected() != instance.getBoolean("key_table_striped")
+                || checkboxSina.isSelected() != instance.getBoolean("key_stocks_sina")
+                || checkboxLog.isSelected() != instance.getBoolean("key_close_log")
+                || checkBoxShowReturn.isSelected() != instance.getBoolean("key_show_return", true)
+                || !StringUtils.equals(StringUtils.defaultString(cronExpressionFund.getText()), instance.getValue("key_cron_expression_fund", "0 * * * * ?"))
+                || !StringUtils.equals(StringUtils.defaultString(cronExpressionStock.getText()), instance.getValue("key_cron_expression_stock", "*/10 * * * * ?"))
+                || !StringUtils.equals(StringUtils.defaultString(cronExpressionCoin.getText()), instance.getValue("key_cron_expression_coin", "*/10 * * * * ?"))
+                || !StringUtils.equals(StringUtils.defaultString(inputProxy.getText()).trim(), StringUtils.defaultString(instance.getValue("key_proxy")));
+    }
+
+    @Override
+    public void reset() {
+        loadSettings();
     }
 
     @Override
@@ -93,6 +113,7 @@ public class SettingsWindow  implements Configurable {
         instance.setValue("key_table_striped", checkBoxTableStriped.isSelected());
         instance.setValue("key_stocks_sina",checkboxSina.isSelected());
         instance.setValue("key_close_log",checkboxLog.isSelected());
+        instance.setValue("key_show_return", String.valueOf(checkBoxShowReturn.isSelected()));
         String proxy = inputProxy.getText().trim();
         instance.setValue("key_proxy",proxy);
         HttpClientPool.getHttpClient().buildHttpClient(proxy);

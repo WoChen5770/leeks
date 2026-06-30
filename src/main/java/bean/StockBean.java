@@ -27,6 +27,7 @@ public class StockBean {
     private String bonds;//持仓
     private String incomePercent;//收益率
     private String income;//收益
+    private String limitVolume;//封单量
 
     public StockBean() {
     }
@@ -169,6 +170,14 @@ public class StockBean {
         this.income = income;
     }
 
+    public String getLimitVolume() {
+        return limitVolume;
+    }
+
+    public void setLimitVolume(String limitVolume) {
+        this.limitVolume = limitVolume;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -222,6 +231,8 @@ public class StockBean {
                 return this.getCostPrise() != null ? this.getIncomePercent() + "%" : this.getIncomePercent();
             case "收益":
                 return this.getIncome();
+            case "封单量":
+                return this.getLimitVolume();
             case "更新时间":
                 String timeStr = "--";
                 if (this.getTime() != null && !this.getTime().contains(" ")) {

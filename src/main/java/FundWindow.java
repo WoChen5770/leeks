@@ -87,6 +87,7 @@ public class FundWindow implements ToolWindowFactory {
             PropertiesComponent instance = PropertiesComponent.getInstance();
             boolean colorful = instance.getBoolean("key_colorful");
             fundRefreshHandler.refreshColorful(colorful);
+            fundRefreshHandler.setShowReturn(instance.getBoolean("key_show_return", true));
             List<String> codes = loadFunds();
             if (CollectionUtils.isEmpty(codes)) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源
@@ -113,7 +114,9 @@ public class FundWindow implements ToolWindowFactory {
     public static void apply() {
         if (fundRefreshHandler != null) {
             PropertiesComponent instance = PropertiesComponent.getInstance();
+            fundRefreshHandler.reloadColumnNames();
             fundRefreshHandler.setStriped(instance.getBoolean("key_table_striped"));
+            fundRefreshHandler.setShowReturn(instance.getBoolean("key_show_return", true));
             fundRefreshHandler.clearRow();
             fundRefreshHandler.setupTable(loadFunds());
             refresh();
