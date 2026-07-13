@@ -12,7 +12,6 @@ import com.intellij.ui.table.JBTable;
 import handler.SinaStockHandler;
 import handler.StockRefreshHandler;
 import handler.TencentStockHandler;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -168,7 +167,7 @@ public class StockWindow {
             handler.refreshColorful(instance.getBoolean("key_colorful"));
             handler.setShowReturn(instance.getBoolean("key_show_return", true));
             List<String> codes = loadStocks();
-            if (CollectionUtils.isEmpty(codes)) {
+            if (codes.isEmpty()) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源
             } else {
                 handler.handle(codes);

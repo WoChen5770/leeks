@@ -7,7 +7,6 @@ import com.intellij.ui.ToolbarDecorator;
 import com.intellij.ui.table.JBTable;
 import handler.CoinRefreshHandler;
 import handler.YahooCoinHandler;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import quartz.HandlerJob;
@@ -104,7 +103,7 @@ public class CoinWindow {
             PropertiesComponent instance = PropertiesComponent.getInstance();
             handler.refreshColorful(instance.getBoolean("key_colorful"));
             List<String> codes = loadCoins();
-            if (CollectionUtils.isEmpty(codes)) {
+            if (codes.isEmpty()) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源
             } else {
                 handler.handle(codes);
